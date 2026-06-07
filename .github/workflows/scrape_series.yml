@@ -1,0 +1,88 @@
+name: Scrape One Series
+
+on:
+  workflow_dispatch:
+    inputs:
+      series_index:
+        description: "Series index (0=Fusion Prime, 1=Florentine Prime, ... run list-series job to see all)"
+        required: true
+        default: "0"
+      series_name:
+        description: "OR provide series name exactly (overrides index if set)"
+        required: false
+        default: ""
+
+  # Also callable from the orchestrator workflow
+  workflow_call:
+    inputs:
+      series_index:
+        required: true
+        type: string
+      series_name:
+        required: false
+        type: string
+        default: ""
+
+jobs:
+  scrape:
+    name: "Scrape: ${{ inputs.series_name || format('Series #{0}', inputs.series_index) }}"
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          # Need write access to commit CSV back
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: scraper/requirements.txt
+
+      - name: Install dependencies
+        run: pip install -r scraper/requirements.txt
+
+      - name: Run scraper
+        env:
+          SERIES_INDEX: ${{ inputs.series_index }}
+          SERIES_NAME:  ${{ inputs.series_name }}
+        run: |
+          if [ -n "$SERIES_NAME" ]; then
+            python scraper/jaquar_scraper.py --series "$SERIES_NAME" --output-dir data
+          else
+            python scraper/jaquar_scraper.py --series-index "$SERIES_INDEX" --output-dir data
+          fi
+
+      - name: Show summary
+        if: always()
+        run: |
+          if [ -f scrape_summary.json ]; then
+            echo "### Scrape Summary" >> $GITHUB_STEP_SUMMARY
+            echo '```json' >> $GITHUB_STEP_SUMMARY
+            cat scrape_summary.json >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            cat scrape_summary.json
+          fi
+
+      - name: Commit CSV to repo
+        if: success()
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/
+          git add scrape_summary.json || true
+          # Only commit if there are actual changes
+          git diff --cached --quiet || git commit -m "data: scrape ${{ inputs.series_name || format('series-{0}', inputs.series_index) }} [skip ci]"
+          git push
+
+      - name: Upload CSV as artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: "csv-${{ inputs.series_name || format('series-{0}', inputs.series_index) }}"
+          path: data/*.csv
+          retention-days: 30
