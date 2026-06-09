@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       series_index:
-        description: "Series index (0=Fusion Prime, 1=Florentine Prime, ... run list-series job to see all)"
+        description: "Series index (0=Fusion Prime, 1=Florentine Prime, etc.)"
         required: true
         default: "0"
       series_name:
@@ -12,7 +12,6 @@ on:
         required: false
         default: ""
 
-  # Also callable from the orchestrator workflow
   workflow_call:
     inputs:
       series_index:
@@ -33,7 +32,6 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
         with:
-          # Need write access to commit CSV back
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set up Python
@@ -74,8 +72,9 @@ jobs:
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add data/
-          git add scrape_summary.json || true
-          # Only commit if there are actual changes
+          # Pull latest before pushing to avoid race condition with parallel jobs
+          git pull --rebase origin main
+          # Only commit if there are actual staged changes
           git diff --cached --quiet || git commit -m "data: scrape ${{ inputs.series_name || format('series-{0}', inputs.series_index) }} [skip ci]"
           git push
 
