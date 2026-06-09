@@ -71,6 +71,8 @@ jobs:
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+          # Remove scrape_summary.json so working tree is clean before rebase
+          rm -f scrape_summary.json
           git add data/
           # Pull latest before pushing to avoid race condition with parallel jobs
           git pull --rebase origin main
