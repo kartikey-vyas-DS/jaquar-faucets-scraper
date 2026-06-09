@@ -1,39 +1,45 @@
 name: Scrape All Faucets (Orchestrator)
 
+# ─────────────────────────────────────────────────────────────────────────────
+# HOW TO USE
+#
+# Full run from scratch:
+#   → Run workflow, leave all inputs at default
+#
+# Resume from a specific series (e.g. already have 0-1, start at Laguna=2):
+#   → Use "Scrape One Series" workflow manually for each remaining series,
+#     OR trigger this workflow and manually cancel the early jobs you don't need.
+#     The simplest resume path: just run "Scrape One Series" for index 2,
+#     then 3, then 4... or use the dispatch_from input below.
+#
+# The orchestrator runs all 26 series SEQUENTIALLY (one at a time).
+# Each series commits its CSV to data/ before the next one starts.
+# If a series fails, the next one still runs (continue-on-error: true).
+# ─────────────────────────────────────────────────────────────────────────────
+
 on:
   workflow_dispatch:
     inputs:
-      start_index:
-        description: "Start from series index (0 = beginning, useful for resuming)"
+      skip_to_index:
+        description: |
+          Skip series 0 through N-1 and start at index N.
+          e.g. enter 2 to skip Fusion Prime (0) and Florentine Prime (1) and start at Laguna (2).
+          Leave as 0 to run everything.
         required: false
         default: "0"
 
 jobs:
-  # ── List all series so the summary is visible ────────────────────────────────
-  list-series:
-    name: "List all series"
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - run: pip install -r scraper/requirements.txt
-      - run: python scraper/jaquar_scraper.py --list-series
-
-  # ── One job per series — sequential via needs: ────────────────────────────────
-  # Each job depends on the previous completing successfully (or being skipped).
-  # If a job fails, subsequent jobs are skipped and you can re-run from that index.
 
   s00-fusion-prime:
     name: "00 Fusion Prime"
-    needs: list-series
+    if: ${{ fromJSON(inputs.skip_to_index) <= 0 }}
     uses: ./.github/workflows/scrape_series.yml
     with:
       series_index: "0"
 
   s01-florentine-prime:
     name: "01 Florentine Prime"
+    if: ${{ fromJSON(inputs.skip_to_index) <= 1 }}
     needs: s00-fusion-prime
     uses: ./.github/workflows/scrape_series.yml
     with:
@@ -41,6 +47,7 @@ jobs:
 
   s02-laguna:
     name: "02 Laguna"
+    if: ${{ always() && fromJSON(inputs.skip_to_index) <= 2 }}
     needs: s01-florentine-prime
     uses: ./.github/workflows/scrape_series.yml
     with:
@@ -48,6 +55,7 @@ jobs:
 
   s03-continental-prime:
     name: "03 Continental Prime"
+    if: ${{ always() && fromJSON(inputs.skip_to_index) <= 3 }}
     needs: s02-laguna
     uses: ./.github/workflows/scrape_series.yml
     with:
@@ -55,6 +63,7 @@ jobs:
 
   s04-blush-sensor:
     name: "04 Blush Sensor Faucets"
+    if: ${{ always() && fromJSON(inputs.skip_to_index) <= 4 }}
     needs: s03-continental-prime
     uses: ./.github/workflows/scrape_series.yml
     with:
@@ -62,6 +71,7 @@ jobs:
 
   s05-queens-prime:
     name: "05 Queen's Prime"
+    if: ${{ always() && fromJSON(inputs.skip_to_index) <= 5 }}
     needs: s04-blush-sensor
     uses: ./.github/workflows/scrape_series.yml
     with:
@@ -69,6 +79,7 @@ jobs:
 
   s06-arc:
     name: "06 Arc"
+    if: ${{ always() && fromJSON(inputs.skip_to_index) <= 6 }}
     needs: s05-queens-prime
     uses: ./.github/workflows/scrape_series.yml
     with:
@@ -76,6 +87,7 @@ jobs:
 
   s07-kubix-prime:
     name: "07 Kubix Prime"
+    if: ${{ always() && fromJSON(inputs.skip_to_index) <= 7 }}
     needs: s06-arc
     uses: ./.github/workflows/scrape_series.yml
     with:
@@ -83,6 +95,7 @@ jobs:
 
   s08-opal-prime:
     name: "08 Opal Prime"
+    if: ${{ always() && fromJSON(inputs.skip_to_index) <= 8 }}
     needs: s07-kubix-prime
     uses: ./.github/workflows/scrape_series.yml
     with:
@@ -90,6 +103,7 @@ jobs:
 
   s09-ornamix-prime:
     name: "09 Ornamix Prime"
+    if: ${{ always() && fromJSON(inputs.skip_to_index) <= 9 }}
     needs: s08-opal-prime
     uses: ./.github/workflows/scrape_series.yml
     with:
@@ -97,6 +111,7 @@ jobs:
 
   s10-alive:
     name: "10 Alive"
+    if: ${{ always() && fromJSON(inputs.skip_to_index) <= 10 }}
     needs: s09-ornamix-prime
     uses: ./.github/workflows/scrape_series.yml
     with:
@@ -104,6 +119,7 @@ jobs:
 
   s11-queens:
     name: "11 Queen's"
+    if: ${{ always() && fromJSON(inputs.skip_to_index) <= 11 }}
     needs: s10-alive
     uses: ./.github/workflows/scrape_series.yml
     with:
@@ -111,6 +127,7 @@ jobs:
 
   s12-lyric:
     name: "12 Lyric"
+    if: ${{ always() && fromJSON(inputs.skip_to_index) <= 12 }}
     needs: s11-queens
     uses: ./.github/workflows/scrape_series.yml
     with:
@@ -118,6 +135,7 @@ jobs:
 
   s13-aria:
     name: "13 Aria"
+    if: ${{ always() && fromJSON(inputs.skip_to_index) <= 13 }}
     needs: s12-lyric
     uses: ./.github/workflows/scrape_series.yml
     with:
@@ -125,6 +143,7 @@ jobs:
 
   s14-vignette-prime:
     name: "14 Vignette Prime"
+    if: ${{ always() && fromJSON(inputs.skip_to_index) <= 14 }}
     needs: s13-aria
     uses: ./.github/workflows/scrape_series.yml
     with:
@@ -132,6 +151,7 @@ jobs:
 
   s15-fusion:
     name: "15 Fusion"
+    if: ${{ always() && fromJSON(inputs.skip_to_index) <= 15 }}
     needs: s14-vignette-prime
     uses: ./.github/workflows/scrape_series.yml
     with:
@@ -139,6 +159,7 @@ jobs:
 
   s16-solo:
     name: "16 Solo"
+    if: ${{ always() && fromJSON(inputs.skip_to_index) <= 16 }}
     needs: s15-fusion
     uses: ./.github/workflows/scrape_series.yml
     with:
@@ -146,6 +167,7 @@ jobs:
 
   s17-clarion:
     name: "17 Clarion"
+    if: ${{ always() && fromJSON(inputs.skip_to_index) <= 17 }}
     needs: s16-solo
     uses: ./.github/workflows/scrape_series.yml
     with:
@@ -153,6 +175,7 @@ jobs:
 
   s18-floor-standing:
     name: "18 Floor Standing Mixer"
+    if: ${{ always() && fromJSON(inputs.skip_to_index) <= 18 }}
     needs: s17-clarion
     uses: ./.github/workflows/scrape_series.yml
     with:
@@ -160,6 +183,7 @@ jobs:
 
   s19-sensor-faucets:
     name: "19 Sensor Faucets"
+    if: ${{ always() && fromJSON(inputs.skip_to_index) <= 19 }}
     needs: s18-floor-standing
     uses: ./.github/workflows/scrape_series.yml
     with:
@@ -167,6 +191,7 @@ jobs:
 
   s20-new-age-pressmatic:
     name: "20 New Age Pressmatic"
+    if: ${{ always() && fromJSON(inputs.skip_to_index) <= 20 }}
     needs: s19-sensor-faucets
     uses: ./.github/workflows/scrape_series.yml
     with:
@@ -174,6 +199,7 @@ jobs:
 
   s21-pressmatic-taps:
     name: "21 Pressmatic Taps"
+    if: ${{ always() && fromJSON(inputs.skip_to_index) <= 21 }}
     needs: s20-new-age-pressmatic
     uses: ./.github/workflows/scrape_series.yml
     with:
@@ -181,6 +207,7 @@ jobs:
 
   s22-medi-series:
     name: "22 Medi Series"
+    if: ${{ always() && fromJSON(inputs.skip_to_index) <= 22 }}
     needs: s21-pressmatic-taps
     uses: ./.github/workflows/scrape_series.yml
     with:
@@ -188,6 +215,7 @@ jobs:
 
   s23-spout-operating:
     name: "23 Spout Operating Tap"
+    if: ${{ always() && fromJSON(inputs.skip_to_index) <= 23 }}
     needs: s22-medi-series
     uses: ./.github/workflows/scrape_series.yml
     with:
@@ -195,6 +223,7 @@ jobs:
 
   s24-bathtub-spouts:
     name: "24 Bathtub Spouts"
+    if: ${{ always() && fromJSON(inputs.skip_to_index) <= 24 }}
     needs: s23-spout-operating
     uses: ./.github/workflows/scrape_series.yml
     with:
@@ -202,44 +231,43 @@ jobs:
 
   s25-allied:
     name: "25 Allied"
+    if: ${{ always() && fromJSON(inputs.skip_to_index) <= 25 }}
     needs: s24-bathtub-spouts
     uses: ./.github/workflows/scrape_series.yml
     with:
       series_index: "25"
 
-  # ── Final merge step ─────────────────────────────────────────────────────────
+  # ── Final merge ──────────────────────────────────────────────────────────────
   merge-all-csvs:
     name: "Merge all CSVs → jaquar_faucets_complete.csv"
     runs-on: ubuntu-latest
-    needs:
-      - s25-allied
+    if: always()
+    needs: s25-allied
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repo (with latest commits from all series)
+        uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
+          ref: main
 
-      - name: Merge CSVs
+      - name: Merge all series CSVs
         run: |
           python3 - << 'EOF'
           import csv, os, glob
 
           output_file = "data/jaquar_faucets_complete.csv"
           csv_files   = sorted(glob.glob("data/*.csv"))
-
-          # Exclude the combined file itself if re-running
-          csv_files = [f for f in csv_files if "complete" not in f]
+          csv_files   = [f for f in csv_files if "complete" not in f and f != output_file]
 
           if not csv_files:
               print("No CSV files found in data/")
               exit(1)
 
-          header_written = False
-          total_rows     = 0
-
+          total_rows = 0
           with open(output_file, "w", newline="", encoding="utf-8-sig") as outf:
               writer = None
               for filepath in csv_files:
-                  print(f"Merging: {filepath}")
+                  print(f"  Merging: {filepath}")
                   with open(filepath, "r", encoding="utf-8-sig") as inf:
                       reader = csv.DictReader(inf)
                       if writer is None:
@@ -249,19 +277,20 @@ jobs:
                           writer.writerow(row)
                           total_rows += 1
 
-          print(f"\nTotal rows written: {total_rows}")
-          print(f"Output: {output_file}")
+          print(f"\nTotal rows: {total_rows}")
+          print(f"Files merged: {len(csv_files)}")
           EOF
 
       - name: Commit merged CSV
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+          git pull --rebase origin main
           git add data/jaquar_faucets_complete.csv
           git diff --cached --quiet || git commit -m "data: merged complete faucets CSV [skip ci]"
           git push
 
-      - name: Upload merged CSV
+      - name: Upload merged CSV as artifact
         uses: actions/upload-artifact@v4
         with:
           name: jaquar-faucets-complete
