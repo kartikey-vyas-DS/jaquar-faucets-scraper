@@ -71,13 +71,10 @@ jobs:
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          # Remove scrape_summary.json so working tree is clean before rebase
           rm -f scrape_summary.json
           git add data/
-          # Pull latest before pushing to avoid race condition with parallel jobs
-          git pull --rebase origin main
-          # Only commit if there are actual staged changes
           git diff --cached --quiet || git commit -m "data: scrape ${{ inputs.series_name || format('series-{0}', inputs.series_index) }} [skip ci]"
+          git pull --rebase origin main
           git push
 
       - name: Upload CSV as artifact
